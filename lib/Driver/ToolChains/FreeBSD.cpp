@@ -325,9 +325,9 @@ FreeBSD::FreeBSD(const Driver &D, const llvm::Triple &Triple,
 }
 
 ToolChain::CXXStdlibType FreeBSD::GetDefaultCXXStdlibType() const {
-  if (getTriple().getOSMajorVersion() >= 10)
-    return ToolChain::CST_Libcxx;
-  return ToolChain::CST_Libstdcxx;
+  if (getTriple().getOSMajorVersion() > 0 && getTriple().getOSMajorVersion() < 10)
+    return ToolChain::CST_Libstdcxx;
+  return ToolChain::CST_Libcxx;
 }
 
 void FreeBSD::addLibStdCxxIncludePaths(
