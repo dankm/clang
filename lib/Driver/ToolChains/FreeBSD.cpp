@@ -17,6 +17,7 @@
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -328,6 +329,42 @@ ToolChain::CXXStdlibType FreeBSD::GetDefaultCXXStdlibType() const {
   if (getTriple().getOSMajorVersion() > 0 && getTriple().getOSMajorVersion() < 10)
     return ToolChain::CST_Libstdcxx;
   return ToolChain::CST_Libcxx;
+}
+
+static std::string DetectLibcxxIncludePath(StringRef base) {
+  std::error_code EC;
+  int MaxVersion = 0;
+  std::string MaxVersionString = "";
+  for (llvm::sys::fs::directory_iterator LI(base, EC), LE; !EC && LI != LE;
+       LI = LI.increment(EC)) {
+    StringRef VersionText = llvm::sys::path::filename(LI->path());
+    int Version;
+    if (VersionText[0] == 'v' &&
+        !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
+      if (Version > MaxVersion) {
+        MaxVersion = Version;
+        MaxVersionString = VersionText;
+      }
+    }
+  }
+  return MaxVersion ? (base + "/" + MaxVersionString).str() : "";
+}
+
+std::string FreeBSD::findLibCxxIncludePath() const {
+  const std::string LibCXXIncludePathCandidates[] = {
+      DetectLibcxxIncludePath(getDriver().Dir + "/../include/c++"),
+      // If this is a development, non-installed, clang, libcxx will
+      // not be found at ../include/c++ but it likely to be found at
+      // one of the following two locations:
+      DetectLibcxxIncludePath(getDriver().SysRoot + "/usr/local/include/c++"),
+      DetectLibcxxIncludePath(getDriver().SysRoot + "/usr/include/c++") };
+  for (const auto &IncludePath : LibCXXIncludePathCandidates) {
+    if (IncludePath.empty() || !getVFS().exists(IncludePath))
+      continue;
+    // Use the first candidate that exists.
+    return IncludePath;
+  }
+  return "";
 }
 
 void FreeBSD::addLibStdCxxIncludePaths(
