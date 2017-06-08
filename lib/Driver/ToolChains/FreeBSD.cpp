@@ -315,6 +315,14 @@ FreeBSD::FreeBSD(const Driver &D, const llvm::Triple &Triple,
                  const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
 
+  if (!D.getVFS().exists(getDriver().SysRoot)) {
+    if ((Triple.getArch() == llvm::Triple::x86 ||
+         Triple.getArch() == llvm::Triple::ppc))
+      getFilePaths().push_back(getDriver().Dir + "/../lib32");
+    else
+      getFilePaths().push_back(getDriver().Dir + "/../lib");
+  }
+
   // When targeting 32-bit platforms, look for '/usr/lib32/crt1.o' and fall
   // back to '/usr/lib' if it doesn't exist.
   if ((Triple.getArch() == llvm::Triple::x86 ||
