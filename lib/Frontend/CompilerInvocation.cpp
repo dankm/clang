@@ -44,6 +44,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <atomic>
+#include <ctime>
 #include <memory>
 #include <sys/stat.h>
 #include <system_error>
@@ -2669,6 +2670,21 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args) << Name;
     else
       Opts.ObjCXXARCStandardLibrary = (ObjCXXARCStandardLibraryKind)Library;
+  }
+
+  if (Arg *A = Args.getLastArg(OPT_ffixed_date_time_EQ)) {
+    StringRef DateTime = A->getValue();
+    tm TM = {};
+    char *Rest = strptime(DateTime.str().c_str(), "%Y-%m-%dT%T", &TM);
+    if (!Rest || *Rest)
+      Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
+                                                << DateTime;
+    else {
+      // Fill in tm_wday.
+      TM.tm_isdst = -1;
+      mktime(&TM);
+      Opts.FixedDateTime = TM;
+    }
   }
 
   // Always avoid lexing editor placeholders when we're just running the

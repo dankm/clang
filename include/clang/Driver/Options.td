@@ -1037,6 +1037,10 @@ def finstrument_functions_after_inlining : Flag<["-"], "finstrument-functions-af
 def finstrument_function_entry_bare : Flag<["-"], "finstrument-function-entry-bare">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Instrument function entry only, after inlining, without arguments to the instrumentation call">;
 
+def ffixed_date_time_EQ : Joined<["-"], "ffixed-date-time=">, Group<f_Group>,
+  Flags<[CC1Option, CoreOption]>,
+  HelpText<"Set a fixed value for __DATE__, __TIME__, __TIMESTAMP__, formatted as 1969-12-31T23:59:59 (RFC3339 without fractional seconds and timezone)">;
+
 def fxray_instrument : Flag<["-"], "fxray-instrument">, Group<f_Group>,
   Flags<[CC1Option]>,
   HelpText<"Generate XRay instrumentation sleds on function entry and exit">;

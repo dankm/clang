@@ -27,6 +27,7 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/PreprocessorLexer.h"
 #include "clang/Lex/PTHLexer.h"
 #include "clang/Lex/Token.h"
@@ -1061,8 +1062,14 @@ void Preprocessor::removeCachedMacroExpandedTokensOfLastLexer() {
 /// the identifier tokens inserted.
 static void ComputeDATE_TIME(SourceLocation &DATELoc, SourceLocation &TIMELoc,
                              Preprocessor &PP) {
-  time_t TT = time(nullptr);
-  struct tm *TM = localtime(&TT);
+  struct tm *TM;
+  PreprocessorOptions &PO = PP.getPreprocessorOpts();
+  if (PO.FixedDateTime.hasValue())
+    TM = PO.FixedDateTime.getPointer();
+  else {
+    time_t TT = time(nullptr);
+    TM = localtime(&TT);
+  }
 
   static const char * const Months[] = {
     "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"
@@ -1758,21 +1765,26 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     // MSVC, ICC, GCC, VisualAge C++ extension.  The generated string should be
     // of the form "Ddd Mmm dd hh::mm::ss yyyy", which is returned by asctime.
 
-    // Get the file that we are lexing out of.  If we're currently lexing from
-    // a macro, dig into the include stack.
-    const FileEntry *CurFile = nullptr;
-    PreprocessorLexer *TheLexer = getCurrentFileLexer();
-
-    if (TheLexer)
-      CurFile = SourceMgr.getFileEntryForID(TheLexer->getFileID());
-
     const char *Result;
-    if (CurFile) {
-      time_t TT = CurFile->getModificationTime();
-      struct tm *TM = localtime(&TT);
-      Result = asctime(TM);
+    PreprocessorOptions &PO = getPreprocessorOpts();
+    if (PO.FixedDateTime.hasValue()) {
+      Result = asctime(PO.FixedDateTime.getPointer());
     } else {
-      Result = "??? ??? ?? ??:??:?? ????\n";
+      // Get the file that we are lexing out of.  If we're currently lexing from
+      // a macro, dig into the include stack.
+      const FileEntry *CurFile = nullptr;
+      PreprocessorLexer *TheLexer = getCurrentFileLexer();
+
+      if (TheLexer)
+        CurFile = SourceMgr.getFileEntryForID(TheLexer->getFileID());
+
+      if (CurFile) {
+        time_t TT = CurFile->getModificationTime();
+        struct tm *TM = localtime(&TT);
+        Result = asctime(TM);
+      } else {
+        Result = "??? ??? ?? ??:??:?? ????\n";
+      }
     }
     // Surround the string with " and strip the trailing newline.
     OS << '"' << StringRef(Result).drop_back() << '"';

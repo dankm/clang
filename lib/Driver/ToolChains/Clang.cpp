@@ -3562,6 +3562,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                                  : "-");
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_ffixed_date_time_EQ)) {
+    StringRef DateTime = A->getValue();
+    CmdArgs.push_back(Args.MakeArgString("-ffixed-date-time=" + DateTime));
+  }
+
   bool UseSeparateSections = isUseSeparateSections(Triple);
 
   if (Args.hasFlag(options::OPT_ffunction_sections,

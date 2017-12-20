@@ -11,11 +11,13 @@
 #define LLVM_CLANG_LEX_PREPROCESSOROPTIONS_H_
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include <memory> 
 #include <set>
 #include <string>
+#include <ctime>
 #include <utility>
 #include <vector>
 
@@ -154,6 +156,9 @@ public:
   /// other instances will see that the module has failed and won't try to
   /// build it again.
   std::shared_ptr<FailedModulesSet> FailedModules;
+
+  /// If set, a fixed time that __DATE__, __TIME__, __TIMESTAMP__ expand to.
+  llvm::Optional<tm> FixedDateTime;
 
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}
